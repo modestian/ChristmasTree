@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>祝梨涡圣诞快乐</title>
+    <title>祝你圣诞快乐 - 璀璨定格版</title>
     <style>
         * {
             margin: 0;
@@ -12,7 +12,7 @@
         }
 
         body {
-            background-color: #000;
+            background-color: #020205;
             overflow: hidden;
             height: 100vh;
             display: flex;
@@ -29,33 +29,34 @@
         .tip {
             position: absolute;
             bottom: 20px;
-            color: rgba(255, 255, 255, 0.5);
+            color: rgba(255, 255, 255, 0.6);
             pointer-events: none;
             user-select: none;
             font-size: 14px;
-            text-shadow: 0 0 5px rgba(255,255,255,0.5);
+            text-shadow: 0 0 2px rgba(255,255,255,0.5);
             animation: breathe 2s infinite ease-in-out;
             text-align: center;
             line-height: 1.5;
+            z-index: 10;
         }
 
         @keyframes breathe {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 0.9; }
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
         }
     </style>
 </head>
 <body>
 
     <canvas id="canvas"></canvas>
-    <div class="tip">点击屏幕开启惊喜<br>出现小兔子、爱心和礼物哦 🐰❤️🎁</div>
+    <div class="tip">点击屏幕发射烟花<br> 作者：modestian🐰❤️🎁</div>
 
     <script>
         // ===========================
-        // 1. 基础树粒子类
+        // 1. 树粒子类 (保持不变)
         // ===========================
-        class Particle {
-            constructor(x, y, canvas) {
+        class TreeParticle {
+            constructor(x, y, canvas, type = 'leaf') {
                 this.canvas = canvas;
                 this.ctx = canvas.getContext('2d');
                 this.originalX = x;
@@ -66,88 +67,125 @@
                 this.vy = 0;
                 this.targetX = x;
                 this.targetY = y;
-                this.speed = Math.random() * 0.5 + 0.2; 
-                this.radius = Math.random() * 2 + 0.5;
-                this.color = this.getRandomColor();
+                this.speed = Math.random() * 0.4 + 0.1; 
+                this.radius = Math.random() * 2.5 + 1; 
+                this.type = type;
+                this.hue = this.initHue(type);
                 this.opacity = Math.random() * 0.5 + 0.5;
-                
-                // 浮动参数
                 this.floatAngle = Math.random() * Math.PI * 2; 
-                this.floatSpeed = Math.random() * 0.02 + 0.01; 
-                this.floatRange = Math.random() * 0.05 + 0.02; 
             }
 
-            getRandomColor() {
-                const colors = ['#00ff00', '#00cc00', '#33ff33', '#ffff00', '#ff3300', '#ffffff', '#FFD700'];
-                return colors[Math.floor(Math.random() * colors.length)];
+            initHue(type) {
+                if (type === 'trunk') return 30;
+                if (type === 'star') return 50;
+                return Math.random() > 0.8 ? Math.random() * 360 : (90 + Math.random() * 60); 
             }
 
             update() {
                 const dx = this.targetX - this.x;
                 const dy = this.targetY - this.y;
-                const ax = dx * this.speed * 0.01;
-                const ay = dy * this.speed * 0.01;
-                
-                this.vx += ax;
-                this.vy += ay;
-                
-                // 浮动干扰
-                this.floatAngle += this.floatSpeed;
-                this.vx += Math.cos(this.floatAngle) * this.floatRange;
-                this.vy += Math.sin(this.floatAngle) * this.floatRange;
-
+                this.vx += dx * this.speed * 0.01;
+                this.vy += dy * this.speed * 0.01;
+                this.floatAngle += 0.02;
+                this.vx += Math.cos(this.floatAngle) * 0.02;
+                this.vy += Math.sin(this.floatAngle) * 0.02;
                 this.vx *= 0.92;
                 this.vy *= 0.92;
-                
                 this.x += this.vx;
                 this.y += this.vy;
+                if(this.type !== 'trunk') this.hue += 0.5;
             }
 
             draw() {
-                this.ctx.save();
-                this.ctx.globalAlpha = this.opacity;
-                this.ctx.fillStyle = this.color;
                 this.ctx.beginPath();
                 this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = `hsla(${this.hue}, 80%, 60%, ${this.opacity})`;
                 this.ctx.fill();
-                this.ctx.restore();
             }
 
-            setTarget(x, y) {
-                this.targetX = x;
-                this.targetY = y;
-            }
-
-            reset() {
-                this.setTarget(this.originalX, this.originalY);
-            }
-
+            setTarget(x, y) { this.targetX = x; this.targetY = y; }
+            reset() { this.setTarget(this.originalX, this.originalY); }
+            
             goToGalaxyPosition() {
                 const centerX = this.canvas.width / 2;
                 const centerY = this.canvas.height / 2;
                 const angle = Math.random() * Math.PI * 2 * 4; 
                 const distance = Math.random() * (Math.min(this.canvas.width, this.canvas.height) / 1.8);
-                const spiralX = centerX + Math.cos(angle) * distance;
-                const spiralY = centerY + Math.sin(angle) * distance;
-                this.setTarget(spiralX, spiralY);
+                this.setTarget(centerX + Math.cos(angle) * distance, centerY + Math.sin(angle) * distance);
             }
         }
 
         // ===========================
-        // 2. 烟花粒子类
+        // 2. 烟花弹类
         // ===========================
-        class FireworkParticle {
-            constructor(x, y, vx, vy, color, ctx) {
+        class Rocket {
+            constructor(startX, targetY, shapeType, ctx) {
+                this.x = startX;
+                this.y = ctx.canvas.height;
+                this.targetY = targetY;
+                this.shapeType = shapeType;
+                this.ctx = ctx;
+                this.vy = -(Math.random() * 3 + 12); 
+                this.vx = (Math.random() - 0.5) * 2;
+                this.gravity = 0.2;
+                this.trail = []; 
+                this.exploded = false;
+                this.hue = Math.random() * 360;
+            }
+
+            update() {
+                this.trail.push({x: this.x, y: this.y});
+                if (this.trail.length > 5) this.trail.shift();
+
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.vx *= 0.99;
+
+                if (this.vy >= -1 || this.y <= this.targetY) {
+                    this.exploded = true;
+                }
+            }
+
+            draw() {
+                for(let i = 0; i < this.trail.length; i++) {
+                    const p = this.trail[i];
+                    const progress = (i + 1) / this.trail.length;
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, 2 * progress, 0, Math.PI * 2);
+                    this.ctx.fillStyle = `hsla(${this.hue}, 100%, 70%, ${progress * 0.5})`;
+                    this.ctx.fill();
+                }
+                this.ctx.beginPath();
+                this.ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                this.ctx.fillStyle = `hsl(${this.hue}, 100%, 80%)`;
+                this.ctx.fill();
+            }
+        }
+
+        // ===========================
+        // 3. 爆炸粒子类 (核心物理调整)
+        // ===========================
+        class Spark {
+            constructor(x, y, vx, vy, hue, ctx) {
                 this.x = x;
                 this.y = y;
-                this.ctx = ctx;
-                this.color = color;
                 this.vx = vx;
                 this.vy = vy;
-                this.gravity = 0.04;
-                this.friction = 0.95;
+                this.hue = hue;
+                this.ctx = ctx;
+                
+                // 【调整1】极低重力：让形状像悬浮在空中一样
+                this.gravity = 0.025; 
+                
+                // 【调整2】高空气阻力：让粒子炸开后迅速刹车，保持队形
+                this.friction = 0.92; 
+                
                 this.alpha = 1;
-                this.decay = Math.random() * 0.015 + 0.008; // 稍微加快一点点消失速度
+                // 【调整3】超长寿命：减缓消失速度
+                this.decay = Math.random() * 0.005 + 0.005; 
+                
+                this.size = Math.random() * 2 + 1;
             }
 
             update() {
@@ -157,21 +195,22 @@
                 this.x += this.vx;
                 this.y += this.vy;
                 this.alpha -= this.decay;
+                this.hue += 0.2; // 颜色变化慢一点
             }
 
             draw() {
                 this.ctx.save();
                 this.ctx.globalAlpha = this.alpha;
-                this.ctx.fillStyle = this.color;
+                this.ctx.fillStyle = `hsl(${this.hue}, 100%, 65%)`;
                 this.ctx.beginPath();
-                this.ctx.arc(this.x, this.y, 1.8, 0, Math.PI * 2);
+                this.ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 this.ctx.fill();
                 this.ctx.restore();
             }
         }
 
         // ===========================
-        // 3. 掉落文字类
+        // 4. 掉落文字类
         // ===========================
         class FallingText {
             constructor(text, x, y, ctx) {
@@ -180,31 +219,29 @@
                 this.y = y;
                 this.ctx = ctx;
                 this.speed = Math.random() * 1.5 + 1; 
-                this.fontSize = Math.random() * 10 + 16; // 字体稍微调小一点点，更精致
-                this.color = `hsl(${Math.random() * 360}, 80%, 75%)`; 
-                this.oscillation = Math.random() * Math.PI * 2;
-                this.oscillationSpeed = Math.random() * 0.05 + 0.02;
+                this.fontSize = Math.random() * 10 + 20; 
+                this.hue = Math.random() * 360;
+                this.oscillation = 0;
             }
 
             update() {
                 this.y += this.speed;
-                this.oscillation += this.oscillationSpeed;
-                this.x += Math.sin(this.oscillation) * 0.8; 
+                this.oscillation += 0.05;
+                this.x += Math.sin(this.oscillation) * 0.5; 
+                this.hue += 1;
             }
 
             draw() {
                 this.ctx.save();
                 this.ctx.font = `bold ${this.fontSize}px "Microsoft YaHei"`;
-                this.ctx.fillStyle = this.color;
-                this.ctx.shadowColor = this.color;
-                this.ctx.shadowBlur = 12; 
+                this.ctx.fillStyle = `hsl(${this.hue}, 100%, 75%)`;
                 this.ctx.fillText(this.text, this.x, this.y);
                 this.ctx.restore();
             }
         }
 
         // ===========================
-        // 4. 主控类
+        // 5. 主控类
         // ===========================
         class ChristmasTree {
             constructor() {
@@ -212,10 +249,13 @@
                 this.ctx = this.canvas.getContext('2d');
                 
                 this.treeParticles = [];     
-                this.fireworks = [];         
+                this.rockets = [];
+                this.sparks = [];
                 this.fallingTexts = [];      
                 
                 this.isGalaxy = false;
+                this.lastClickTime = 0;
+                
                 this.init();
             }
 
@@ -236,186 +276,207 @@
                 this.canvas.height = window.innerHeight;
             }
 
-            // --- 调整：减少树的粒子数量 ---
             createTreeParticles() {
                 this.treeParticles = [];
                 const centerX = this.canvas.width / 2;
                 const centerY = this.canvas.height / 2 - 40;
-                const treeHeight = 350;
-                const treeWidth = 280;
                 
-                // 1. 树干 (减少到 100)
-                for (let i = 0; i < 100; i++) { 
+                // 树干
+                for (let i = 0; i < 80; i++) { 
                     const x = centerX + (Math.random() - 0.5) * 30;
-                    const y = centerY + treeHeight + Math.random() * 40;
-                    const p = new Particle(x, y, this.canvas);
-                    p.color = '#8B4513'; 
-                    this.treeParticles.push(p);
+                    const y = centerY + 350 + Math.random() * 40;
+                    this.treeParticles.push(new TreeParticle(x, y, this.canvas, 'trunk'));
                 }
                 
-                // 2. 树冠
+                // 树冠
                 const levels = 15; 
                 for (let level = 0; level < levels; level++) {
                     const progress = level / levels; 
-                    const currentY = centerY + progress * treeHeight;
-                    const currentWidth = treeWidth * progress; 
-                    
-                    // 减少每一层的粒子密度：从 (50 + level*25) 减到 (40 + level*22)
-                    const particlesInLevel = 40 + level * 22; 
+                    const currentY = centerY + progress * 350;
+                    const currentWidth = 280 * progress; 
+                    const particlesInLevel = 35 + level * 20; 
                     
                     for(let i=0; i<particlesInLevel; i++) {
-                        const xOffset = (Math.random() - 0.5) * currentWidth; 
-                        const yRandom = Math.random() * 15; 
-                        const x = centerX + xOffset;
-                        const y = currentY + yRandom;
-                        const p = new Particle(x, y, this.canvas);
-                        this.treeParticles.push(p);
+                        const x = centerX + (Math.random() - 0.5) * currentWidth;
+                        const y = currentY + Math.random() * 15;
+                        this.treeParticles.push(new TreeParticle(x, y, this.canvas, 'leaf'));
                     }
                 }
                 
-                // 3. 树顶大星星 (减少到 30)
+                // 树顶星
                 for(let i=0; i<30; i++) {
                     const angle = Math.random() * Math.PI * 2;
-                    const radius = Math.random() * 15;
-                    const x = centerX + Math.cos(angle) * (radius * Math.random());
-                    const y = centerY - 10 + Math.sin(angle) * (radius * Math.random());
-                    const p = new Particle(x, y, this.canvas);
-                    p.color = '#FFFFE0';
-                    p.radius = Math.random() * 2 + 1;
-                    this.treeParticles.push(p);
+                    const r = Math.random() * 15;
+                    this.treeParticles.push(new TreeParticle(
+                        centerX + Math.cos(angle) * r, 
+                        centerY - 10 + Math.sin(angle) * r, 
+                        this.canvas, 'star'
+                    ));
                 }
             }
 
             handleInteraction(e) {
+                const now = Date.now();
+                if (now - this.lastClickTime < 100) return;
+                this.lastClickTime = now;
+
                 this.isGalaxy = !this.isGalaxy;
-                if (!this.isGalaxy) {
+                this.isGalaxy ? 
+                    this.treeParticles.forEach(p => p.goToGalaxyPosition()) : 
                     this.treeParticles.forEach(p => p.reset());
-                } else {
-                    this.treeParticles.forEach(p => p.goToGalaxyPosition());
-                }
-                
-                this.launchFireworks();
+
+                this.launchRocket();
                 this.dropTexts();
             }
 
-            launchFireworks() {
+            launchRocket() {
                 const shapes = ['rabbit', 'heart', 'gift'];
-                // 每次点击产生 3-4 个烟花 (保持不变)
-                const count = 3 + Math.floor(Math.random() * 2);
+                const count = 1 + Math.floor(Math.random() * 2);
                 
-                for(let k=0; k<count; k++) {
-                    const x = Math.random() < 0.5 
-                        ? Math.random() * (this.canvas.width * 0.3) + 50
-                        : this.canvas.width - Math.random() * (this.canvas.width * 0.3) - 50;
-                    const y = Math.random() * (this.canvas.height * 0.5) + 50;
+                for(let i=0; i<count; i++) {
+                    const startX = Math.random() * this.canvas.width * 0.8 + this.canvas.width * 0.1;
+                    const targetY = Math.random() * (this.canvas.height * 0.4) + 50;
+                    const shape = shapes[Math.floor(Math.random() * shapes.length)];
                     
-                    const shapeType = shapes[Math.floor(Math.random() * shapes.length)];
-                    this.createShapeFirework(x, y, shapeType);
+                    setTimeout(() => {
+                        this.rockets.push(new Rocket(startX, targetY, shape, this.ctx));
+                    }, i * 150);
                 }
             }
 
-            // --- 调整：减少烟花的粒子数量 ---
-            createShapeFirework(centerX, centerY, type) {
-                const power = 2;
+            explodeRocket(rocket) {
+                const centerX = rocket.x;
+                const centerY = rocket.y;
+                const type = rocket.shapeType;
                 
-                // 1. 爱心 (减少到 90)
+                // 【调整4】高爆发力：配合高阻力，实现瞬间炸开然后停顿的效果
+                const power = 8; 
+
+                let baseHue;
+                if (type === 'heart') baseHue = 340;
+                else if (type === 'rabbit') baseHue = 300;
+                else if (type === 'gift') baseHue = 45;
+
+                const getHue = () => baseHue + (Math.random() - 0.5) * 40;
+
+                // --- 1. 爱心 ---
                 if (type === 'heart') {
-                    const particleCount = 90; 
-                    const color = '#FF69B4'; 
-                    for(let i=0; i<particleCount; i++) {
-                        const t = (Math.PI * 2 * i) / particleCount;
+                    // 粒子数量增加到 120，描绘出实线轮廓
+                    for(let i=0; i<120; i++) {
+                        const t = (Math.PI * 2 * i) / 120;
                         const dirX = 16 * Math.pow(Math.sin(t), 3);
                         const dirY = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
-                        
-                        const scale = 0.15 * Math.random() + 0.1;
-                        const vx = dirX * scale * power;
-                        const vy = dirY * scale * power;
-                        
-                        this.fireworks.push(new FireworkParticle(centerX, centerY, vx, vy, color, this.ctx));
+                        // 减少随机性，让轮廓更清晰
+                        const scale = (0.08 * Math.random() + 0.12); 
+                        this.sparks.push(new Spark(centerX, centerY, dirX * scale * power * 0.5, dirY * scale * power * 0.5, getHue(), this.ctx));
                     }
                 }
                 
-                // 2. 小兔子 (头部减少到 40，耳朵减少到 20/个)
+                // --- 2. 兔子 ---
                 else if (type === 'rabbit') {
-                    const color = '#FFC0CB'; 
-                    
-                    // 头部
-                    for(let i=0; i<40; i++) {
-                        const angle = Math.random() * Math.PI * 2;
-                        const speed = Math.random() * 1.5;
-                        const vx = Math.cos(angle) * speed;
-                        const vy = Math.sin(angle) * speed;
-                        this.fireworks.push(new FireworkParticle(centerX, centerY, vx, vy, color, this.ctx));
+                    // 头 (增加粒子密度)
+                    for(let i=0; i<80; i++) {
+                        const angle = (Math.PI * 2 * i) / 80;
+                        const v = 2.5; // 固定速度，形成圆环而非实心
+                        this.sparks.push(new Spark(centerX, centerY, Math.cos(angle)*v*power*0.5, Math.sin(angle)*v*power*0.5, getHue(), this.ctx));
                     }
-                    
                     // 耳朵
-                    const createEar = (offsetX, angleOffset) => {
-                        for(let i=0; i<20; i++) {
-                            const t = Math.random() * Math.PI * 2;
+                    const createEar = (offsetX, rot) => {
+                        for(let i=0; i<50; i++) {
+                            const t = (Math.PI * 2 * i) / 50;
                             const ex = Math.cos(t) * 0.8; 
                             const ey = Math.sin(t) * 2.5; 
-                            
-                            const rot = angleOffset; 
-                            const finalX = ex * Math.cos(rot) - ey * Math.sin(rot) + offsetX;
-                            const finalY = ex * Math.sin(rot) + ey * Math.cos(rot) - 2; 
-                            
-                            this.fireworks.push(new FireworkParticle(centerX, centerY, finalX, finalY, color, this.ctx));
+                            const fx = ex * Math.cos(rot) - ey * Math.sin(rot) + offsetX;
+                            const fy = ex * Math.sin(rot) + ey * Math.cos(rot) - 2; 
+                            this.sparks.push(new Spark(centerX, centerY, fx * power * 0.5, fy * power * 0.5, getHue(), this.ctx));
                         }
                     };
-                    createEar(-1.5, -0.2); 
-                    createEar(1.5, 0.2);   
+                    createEar(-1.5, -0.3);
+                    createEar(1.5, 0.3);
                 }
                 
-                // 3. 礼物盒 (减少到 100)
+                // --- 3. 礼物 ---
                 else if (type === 'gift') {
-                    const color = '#FF0000'; 
-                    const ribbonColor = '#FFD700'; 
-                    const size = 3; 
+                    // 绘制正方形轮廓，而不是随机炸开
+                    const size = 6; 
+                    const particlesPerSide = 25;
                     
-                    for(let i=0; i<100; i++) {
-                        const vx = (Math.random() - 0.5) * size * 2;
-                        const vy = (Math.random() - 0.5) * size * 2;
-                        
-                        let pColor = color;
-                        if (Math.abs(vx) < 0.5 || Math.abs(vy) < 0.5) {
-                            pColor = ribbonColor;
+                    // 定义正方形边框函数
+                    const addLine = (x1, y1, x2, y2) => {
+                        for(let i=0; i<particlesPerSide; i++) {
+                            const p = i / particlesPerSide;
+                            const dx = x1 + (x2 - x1) * p;
+                            const dy = y1 + (y2 - y1) * p;
+                            // 稍微加一点点随机抖动，显得自然
+                            const jitterX = (Math.random()-0.5) * 0.5;
+                            const jitterY = (Math.random()-0.5) * 0.5;
+                            this.sparks.push(new Spark(centerX, centerY, (dx+jitterX) * power * 0.3, (dy+jitterY) * power * 0.3, 0, this.ctx)); // 红色盒子
                         }
-                        
-                        this.fireworks.push(new FireworkParticle(centerX, centerY, vx, vy, pColor, this.ctx));
+                    }
+
+                    // 四条边
+                    addLine(-size, -size, size, -size);
+                    addLine(size, -size, size, size);
+                    addLine(size, size, -size, size);
+                    addLine(-size, size, -size, -size);
+                    
+                    // 金色丝带（十字）
+                    for(let i=0; i<particlesPerSide*2; i++) {
+                         // 横向丝带
+                         if(i % 2 === 0) {
+                             const p = i / (particlesPerSide*2);
+                             const dx = -size + size * 2 * p;
+                             this.sparks.push(new Spark(centerX, centerY, dx * power * 0.3, 0, 50, this.ctx));
+                         } else {
+                             // 纵向丝带
+                             const p = i / (particlesPerSide*2);
+                             const dy = -size + size * 2 * p;
+                             this.sparks.push(new Spark(centerX, centerY, 0, dy * power * 0.3, 50, this.ctx));
+                         }
                     }
                 }
             }
 
-            // --- 调整：减少掉落文字数量 ---
             dropTexts() {
-                const phrases = ["祝xxx圣诞快乐", "Merry Christmas To xxx", "平安喜乐", "顺风顺水", "🎄✨", "🎁❤️"];
-                const count = 6; // 从 12 减少到 6
+                const phrases = ["祝你圣诞快乐", "平安喜乐", "万事胜意", "Merry Christmas", "🐰❤️", "✨🎁"];
+                const count = 5 + Math.floor(Math.random() * 2); 
                 for (let i = 0; i < count; i++) {
                     const text = phrases[Math.floor(Math.random() * phrases.length)];
                     const x = Math.random() * this.canvas.width;
-                    const y = -50 - Math.random() * 300; 
+                    const y = -50 - Math.random() * 100; 
                     this.fallingTexts.push(new FallingText(text, x, y, this.ctx));
                 }
             }
 
             animate() {
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                this.ctx.globalCompositeOperation = 'source-over';
+                this.ctx.fillStyle = 'rgba(2, 2, 5, 0.2)'; 
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
                 
-                this.treeParticles.forEach(p => {
-                    p.update();
-                    p.draw();
-                });
+                this.ctx.globalCompositeOperation = 'lighter';
 
-                for (let i = this.fireworks.length - 1; i >= 0; i--) {
-                    const p = this.fireworks[i];
-                    p.update();
-                    p.draw();
-                    if (p.alpha <= 0) {
-                        this.fireworks.splice(i, 1);
+                this.treeParticles.forEach(p => { p.update(); p.draw(); });
+
+                for (let i = this.rockets.length - 1; i >= 0; i--) {
+                    const r = this.rockets[i];
+                    r.update();
+                    r.draw();
+                    if (r.exploded) {
+                        this.explodeRocket(r);
+                        this.rockets.splice(i, 1);
                     }
                 }
 
+                for (let i = this.sparks.length - 1; i >= 0; i--) {
+                    const s = this.sparks[i];
+                    s.update();
+                    s.draw();
+                    if (s.alpha <= 0) {
+                        this.sparks.splice(i, 1);
+                    }
+                }
+
+                this.ctx.globalCompositeOperation = 'source-over';
                 for (let i = this.fallingTexts.length - 1; i >= 0; i--) {
                     const t = this.fallingTexts[i];
                     t.update();
